@@ -2,3 +2,7 @@
 2026-02-24 23:59:18,682 - INFO - \u2705 Successfully parsed: 'Squats 60kilos 3x12' -> {'weight': 60, 'sets': 3, 'reps': 12, 'total_volume': 2160}
 2026-02-24 23:59:18,682 - INFO - \u2705 Successfully parsed: 'Bench 100 kgs for 5 sets of 5 repetitions' -> {'weight': 100, 'sets': 5, 'reps': 5, 'total_volume': 2500}
 2026-02-24 23:59:18,683 - WARNING - \u26a0\ufe0f Failed to parse meaningful data from: 'I feel tired today'
+2026-02-25 23:45:41,198 - INFO - \u2705 Successfully parsed: '100kg 3x5' -> {'weight': 100, 'sets': 3, 'reps': 5, 'total_volume': 1500}
+2026-02-25 23:45:50,662 - INFO - \u2705 Successfully parsed: '100kg 3x5' -> {'weight': 100, 'sets': 3, 'reps': 5, 'total_volume': 1500}
+2026-02-25 23:50:06,490 - INFO - \u2705 Successfully parsed: '60kg 3x10' -> {'weight': 60, 'sets': 3, 'reps': 10, 'total_volume': 1800}
+2026-02-25 23:50:10,089 - INFO - \u2705 Successfully parsed: '60kg 3x10' -> {'weight': 60, 'sets': 3, 'reps': 10, 'total_volume': 1800}
