@@ -9,7 +9,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Gym Workout Table with Cloud Fix
 class GymLog(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     id: Optional[int] = Field(default=None, primary_key=True)
     exercise: str
     muscle_group: str  
@@ -19,19 +21,23 @@ class GymLog(SQLModel, table=True):
     total_volume: int
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+# Goal Tracking Table with Cloud Fix
 class ExerciseGoal(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     id: Optional[int] = Field(default=None, primary_key=True)
     exercise: str = Field(index=True, unique=True)
     target_weight: int
 
+# Cardio & Badminton Table with Cloud Fix
 class CardioLog(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     id: Optional[int] = Field(default=None, primary_key=True)
     activity: str 
     duration_mins: int
     intensity: str 
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-# Use environment variable or fallback to local sqlite
+# Use environment variable for Cloud Deployment
 sqlite_url = os.getenv("DATABASE_URL", "sqlite:///data/biopulse.db")
 engine = create_engine(sqlite_url)
 
@@ -59,4 +65,3 @@ def save_log(raw_text: str, exercise_name: str):
 
 if __name__ == "__main__":
     create_db_and_tables()
-    print("✅ System ready for Cloud Deployment!")
