@@ -6,3 +6,12 @@
 2026-02-25 23:45:50,662 - INFO - \u2705 Successfully parsed: '100kg 3x5' -> {'weight': 100, 'sets': 3, 'reps': 5, 'total_volume': 1500}
 2026-02-25 23:50:06,490 - INFO - \u2705 Successfully parsed: '60kg 3x10' -> {'weight': 60, 'sets': 3, 'reps': 10, 'total_volume': 1800}
 2026-02-25 23:50:10,089 - INFO - \u2705 Successfully parsed: '60kg 3x10' -> {'weight': 60, 'sets': 3, 'reps': 10, 'total_volume': 1800}
+2026-02-25 23:54:40,399 - INFO - \u2705 Successfully parsed: '100kg 3x5' -> {'weight': 100, 'sets': 3, 'reps': 5, 'total_volume': 1500}
+2026-02-25 23:54:40,408 - INFO - \U0001f680 Database Saved: Squat (Legs)
+2026-02-26 00:13:32,400 - WARNING - \u26a0\ufe0f Failed to parse meaningful data from: ''
+2026-02-26 00:14:00,426 - WARNING - \u26a0\ufe0f Failed to parse meaningful data from: '100'
+2026-02-26 00:14:04,457 - WARNING - \u26a0\ufe0f Failed to parse meaningful data from: '100'
+2026-02-26 00:14:58,876 - INFO - \u2705 Successfully parsed: '100kg 3*15' -> {'weight': 100, 'sets': 3, 'reps': 15, 'total_volume': 4500}
+2026-02-26 00:14:58,889 - INFO - \U0001f680 Database Saved: squat (Legs)
+2026-02-26 00:15:22,084 - INFO - \u2705 Successfully parsed: '100kg 3*15' -> {'weight': 100, 'sets': 3, 'reps': 15, 'total_volume': 4500}
+2026-02-26 00:15:22,093 - INFO - \U0001f680 Database Saved: squat (Legs)

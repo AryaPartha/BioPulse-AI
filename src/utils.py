@@ -1,5 +1,6 @@
 import logging
 import os
+import pandas as pd
 
 # Professional Logging Setup
 if not os.path.exists('logs'):
@@ -12,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- NEW: Week 2 Intelligence Layer ---
+# Intelligence Layer: Exercise to Muscle Group Mapping
 EXERCISE_MAPPING = {
     "bench press": "Chest",
     "pushups": "Chest",
@@ -32,3 +33,17 @@ def get_muscle_group(exercise_name):
         if key in exercise_name:
             return value
     return "Other"
+
+def predict_next_weight(history_df, exercise_name):
+    """Suggests the next weight based on recent volume trends."""
+    if history_df.empty:
+        return "Log your first session!"
+    exercise_data = history_df[history_df['exercise'].str.lower() == exercise_name.lower()]
+    if len(exercise_data) < 1:
+        return "New exercise detected! Let's set a baseline."
+    latest_weight = exercise_data.iloc[0]['weight']
+    return f"Target {latest_weight + 2.5}kg for your next set!"
+
+def calculate_relative_strength(lift_weight, body_weight=79):
+    """Calculates strength-to-weight ratio (Lift / 79kg)."""
+    return round(lift_weight / body_weight, 2)
