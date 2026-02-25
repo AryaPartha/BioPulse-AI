@@ -35,7 +35,7 @@ def get_muscle_group(exercise_name):
     return "Other"
 
 def predict_next_weight(history_df, exercise_name):
-    """Suggests the next weight based on recent volume trends."""
+    """Suggests the next weight based on recent trends."""
     if history_df.empty:
         return "Log your first session!"
     exercise_data = history_df[history_df['exercise'].str.lower() == exercise_name.lower()]

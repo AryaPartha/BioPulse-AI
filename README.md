@@ -2,7 +2,7 @@
 
 **Developer:** Partha S. (Final Year CS & Design Engineering)  
 **Location:** Mysuru, Karnataka  
-**Live App:** [Your Streamlit App URL Here]
+**Live App:** (https://biopulse-ai-kmga6ruzkhx4zhapngpc6p.streamlit.app)
 
 ## 🚀 Overview
 BioPulse-AI is a comprehensive, data-driven fitness assistant designed to bridge the gap between strength training and cardio. Built using Python 3.14, it utilizes NLP parsing to turn messy human logs into actionable insights.
