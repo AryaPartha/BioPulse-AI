@@ -1,18 +1,19 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 from main import save_log, GymLog, ExerciseGoal, CardioLog, engine
+from rag_engine import process_fitness_pdf, ask_rag_ai
 from sqlmodel import Session, select
 from utils import predict_next_weight, calculate_relative_strength
 
-# 1. Page Configuration
+# Page Configuration
 st.set_page_config(page_title="BioPulse-AI | Partha S.", page_icon="💪", layout="wide")
 
-# Dashboard Header
-st.title("💪 BioPulse-AI: Smart Fitness Log")
+st.title("💪 BioPulse-AI: Smart Fitness & RAG Insight")
 st.markdown("---")
 
-# 2. Data Retrieval
+# Data Retrieval from SQLite
 with Session(engine) as session:
     gym_results = session.exec(select(GymLog).order_by(GymLog.timestamp.desc())).all()
     df = pd.DataFrame([log.model_dump() for log in gym_results]) if gym_results else pd.DataFrame()
@@ -20,13 +21,13 @@ with Session(engine) as session:
     cardio_results = session.exec(select(CardioLog).order_by(CardioLog.timestamp.desc())).all()
     cardio_df = pd.DataFrame([c.model_dump() for c in cardio_results]) if cardio_results else pd.DataFrame()
 
-# 3. --- SIDEBAR: Profile & Controls ---
+# --- SIDEBAR: Profile & Settings ---
 st.sidebar.markdown(f"### 🧑‍💻 Developer: Partha S.")
 st.sidebar.caption("Final Year CS & Design Engineering")
 st.sidebar.markdown(f"**Current Weight:** 79 kg | **Focus:** Muscle Building")
 st.sidebar.divider()
 
-# Sidebar: Goal Setting
+# Goal Setting Form
 st.sidebar.header("🎯 Set a Goal")
 with st.sidebar.form("goal_form"):
     goal_ex = st.text_input("Exercise", placeholder="Squat")
@@ -39,18 +40,11 @@ with st.sidebar.form("goal_form"):
             session.commit()
             st.rerun()
 
-# Sidebar: CSV Export
-st.sidebar.divider()
-st.sidebar.header("📂 Data Export")
-if not df.empty:
-    csv_data = df.to_csv(index=False).encode('utf-8')
-    st.sidebar.download_button("Download History (CSV)", csv_data, "BioPulse_History.csv", "text/csv")
+# --- MAIN DASHBOARD: TABS ---
+gym_tab, cardio_tab, rag_tab = st.tabs(["🏋️ Gym & Strength", "🏸 Cardio & Badminton", "🧠 AI Insight (RAG)"])
 
-# 4. --- MAIN DASHBOARD: TABS ---
-gym_tab, cardio_tab = st.tabs(["🏋️ Gym & Strength", "🏸 Cardio & Badminton"])
-
+# TAB 1: GYM LOGGING
 with gym_tab:
-    # Sidebar-like entry form for Gym within the tab
     with st.expander("➕ Log New Gym Activity", expanded=True):
         col_ex, col_log = st.columns(2)
         with col_ex:
@@ -58,13 +52,11 @@ with gym_tab:
             if ex_name: st.caption(f"🤖 AI Tip: {predict_next_weight(df, ex_name)}")
         with col_log:
             raw_log = st.text_input("Log Details (e.g., 80kg 3x12)", key="gym_raw")
-        
         if st.button("Save Gym Entry"):
             if save_log(raw_log, ex_name):
                 st.success(f"Saved {ex_name}!")
                 st.rerun()
 
-    # Visuals
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("📜 Recent History")
@@ -77,25 +69,7 @@ with gym_tab:
             fig = px.line(df.sort_values("timestamp"), x="timestamp", y="total_volume", color="exercise", markers=True, template="plotly_dark")
             st.plotly_chart(fig, use_container_width=True)
 
-    # Goals & Distribution
-    st.divider()
-    g_col, p_col = st.columns(2)
-    with g_col:
-        st.subheader("🏆 Goal Progress")
-        with Session(engine) as session:
-            goals = session.exec(select(ExerciseGoal)).all()
-            for goal in goals:
-                latest = df[df['exercise'].str.lower() == goal.exercise.lower()]
-                if not latest.empty:
-                    prog = min(latest.iloc[0]['weight'] / goal.target_weight, 1.0)
-                    st.write(f"**{goal.exercise}** ({latest.iloc[0]['weight']} / {goal.target_weight}kg)")
-                    st.progress(prog)
-    with p_col:
-        st.subheader("🎯 Muscle Split")
-        if not df.empty:
-            fig_p = px.pie(df, names='muscle_group', hole=0.4, template="plotly_dark")
-            st.plotly_chart(fig_p, use_container_width=True)
-
+# TAB 2: CARDIO & BADMINTON
 with cardio_tab:
     st.header("🏸 Badminton & Cardio Tracking")
     with st.form("cardio_form"):
@@ -112,3 +86,30 @@ with cardio_tab:
     if not cardio_df.empty:
         st.subheader("🏸 Cardio History")
         st.table(cardio_df[["timestamp", "activity", "duration_mins", "intensity"]])
+
+# TAB 3: AI INSIGHT (RAG)
+with rag_tab:
+    st.header("🧠 Intelligent Document Insight")
+    st.info("Upload a fitness PDF or badminton guide to query it using the RAG engine.")
+    
+    pdf_file = st.file_uploader("Upload Training PDF (Research, Guides, or Plans)", type="pdf")
+    
+    if pdf_file:
+        # Save temporary file for processing
+        with open("temp_rag.pdf", "wb") as f:
+            f.write(pdf_file.getbuffer())
+        
+        with st.spinner("Analyzing document and building Vector DB..."):
+            # Uses HuggingFace Embeddings + FAISS
+            st.session_state.vdb = process_fitness_pdf("temp_rag.pdf")
+            st.success("Knowledge Base Ready! You can now ask questions.")
+            
+    query = st.text_input("Ask the AI about the document:")
+    if query:
+        if 'vdb' in st.session_state:
+            with st.spinner("Retrieving insights..."):
+                # Uses Groq Llama 3 for free-tier inference
+                response = ask_rag_ai(st.session_state.vdb, query)
+                st.markdown(f"### 🤖 AI Insight:\n{response}")
+        else:
+            st.warning("Please upload a PDF first to enable the AI Insight engine.")
