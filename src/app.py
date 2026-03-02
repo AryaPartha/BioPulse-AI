@@ -1,115 +1,80 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import sqlite3
 import plotly.express as px
-import os
-from main import save_log, GymLog, ExerciseGoal, CardioLog, engine
-from rag_engine import process_fitness_pdf, ask_rag_ai
-from sqlmodel import Session, select
-from utils import predict_next_weight, calculate_relative_strength
+from datetime import datetime
+from sklearn.linear_model import LinearRegression
 
-# Page Configuration
-st.set_page_config(page_title="BioPulse-AI | Partha S.", page_icon="💪", layout="wide")
+def get_user_data(user_id):
+    conn = sqlite3.connect('biopulse.db')
+    df = pd.read_sql(f"SELECT date, metric FROM logs WHERE user_id = {user_id} AND activity = 'Weight' ORDER BY date ASC", conn)
+    conn.close()
+    return df
 
-st.title("💪 BioPulse-AI: Smart Fitness & RAG Insight")
-st.markdown("---")
+def save_log(user_id, activity, metric):
+    conn = sqlite3.connect('biopulse.db')
+    c = conn.cursor()
+    today = datetime.now().strftime("%Y-%m-%d")
+    c.execute("INSERT INTO logs (user_id, date, activity, metric) VALUES (?, ?, ?, ?)", 
+              (user_id, today, activity, metric))
+    conn.commit()
+    conn.close()
 
-# Data Retrieval from SQLite
-with Session(engine) as session:
-    gym_results = session.exec(select(GymLog).order_by(GymLog.timestamp.desc())).all()
-    df = pd.DataFrame([log.model_dump() for log in gym_results]) if gym_results else pd.DataFrame()
+def run_dashboard():
+    user_id = st.session_state['user_id']
     
-    cardio_results = session.exec(select(CardioLog).order_by(CardioLog.timestamp.desc())).all()
-    cardio_df = pd.DataFrame([c.model_dump() for c in cardio_results]) if cardio_results else pd.DataFrame()
+    # 1. Dashboard Header
+    st.header("Personal Health Insights")
+    df = get_user_data(user_id)
 
-# --- SIDEBAR: Profile & Settings ---
-st.sidebar.markdown(f"### 🧑‍💻 Developer: Partha S.")
-st.sidebar.caption("Final Year CS & Design Engineering")
-st.sidebar.markdown(f"**Current Weight:** 79 kg | **Focus:** Muscle Building")
-st.sidebar.divider()
-
-# Goal Setting Form
-st.sidebar.header("🎯 Set a Goal")
-with st.sidebar.form("goal_form"):
-    goal_ex = st.text_input("Exercise", placeholder="Squat")
-    target = st.number_input("Target Weight (kg)", min_value=1)
-    if st.form_submit_button("Set Goal"):
-        with Session(engine) as session:
-            existing = session.exec(select(ExerciseGoal).where(ExerciseGoal.exercise == goal_ex)).first()
-            if existing: existing.target_weight = target
-            else: session.add(ExerciseGoal(exercise=goal_ex, target_weight=target))
-            session.commit()
-            st.rerun()
-
-# --- MAIN DASHBOARD: TABS ---
-gym_tab, cardio_tab, rag_tab = st.tabs(["🏋️ Gym & Strength", "🏸 Cardio & Badminton", "🧠 AI Insight (RAG)"])
-
-# TAB 1: GYM LOGGING
-with gym_tab:
-    with st.expander("➕ Log New Gym Activity", expanded=True):
-        col_ex, col_log = st.columns(2)
-        with col_ex:
-            ex_name = st.text_input("Exercise Name", key="gym_ex")
-            if ex_name: st.caption(f"🤖 AI Tip: {predict_next_weight(df, ex_name)}")
-        with col_log:
-            raw_log = st.text_input("Log Details (e.g., 80kg 3x12)", key="gym_raw")
-        if st.button("Save Gym Entry"):
-            if save_log(raw_log, ex_name):
-                st.success(f"Saved {ex_name}!")
-                st.rerun()
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("📜 Recent History")
-        if not df.empty:
-            df['Rel. Strength'] = df['weight'].apply(lambda x: calculate_relative_strength(x))
-            st.dataframe(df[["timestamp", "exercise", "weight", "Rel. Strength", "total_volume"]], use_container_width=True)
-    with c2:
-        st.subheader("📈 Volume Progress")
-        if not df.empty:
-            fig = px.line(df.sort_values("timestamp"), x="timestamp", y="total_volume", color="exercise", markers=True, template="plotly_dark")
-            st.plotly_chart(fig, use_container_width=True)
-
-# TAB 2: CARDIO & BADMINTON
-with cardio_tab:
-    st.header("🏸 Badminton & Cardio Tracking")
-    with st.form("cardio_form"):
-        act = st.selectbox("Activity", ["Badminton", "Running", "Swimming"])
-        dur = st.number_input("Duration (mins)", min_value=1, value=60)
-        inten = st.select_slider("Intensity", options=["Low", "Moderate", "High"])
-        if st.form_submit_button("Log Session"):
-            with Session(engine) as session:
-                session.add(CardioLog(activity=act, duration_mins=dur, intensity=inten))
-                session.commit()
-                st.success("Session Logged!")
-                st.rerun()
+    # 2. Key Metrics
+    col1, col2, col3 = st.columns(3)
+    current_weight = df['metric'].iloc[-1] if not df.empty else 0.0
+    col1.metric("Current Weight", f"{current_weight} kg")
     
-    if not cardio_df.empty:
-        st.subheader("🏸 Cardio History")
-        st.table(cardio_df[["timestamp", "activity", "duration_mins", "intensity"]])
-
-# TAB 3: AI INSIGHT (RAG)
-with rag_tab:
-    st.header("🧠 Intelligent Document Insight")
-    st.info("Upload a fitness PDF or badminton guide to query it using the RAG engine.")
-    
-    pdf_file = st.file_uploader("Upload Training PDF (Research, Guides, or Plans)", type="pdf")
-    
-    if pdf_file:
-        # Save temporary file for processing
-        with open("temp_rag.pdf", "wb") as f:
-            f.write(pdf_file.getbuffer())
+    # 3. AI Prediction Logic (Scikit-Learn)
+    st.subheader("🤖 AI Weight Trend Forecast")
+    if len(df) > 1:
+        # Convert dates to ordinal for regression
+        df['date_dt'] = pd.to_datetime(df['date'])
+        df['ordinal'] = df['date_dt'].map(datetime.toordinal)
         
-        with st.spinner("Analyzing document and building Vector DB..."):
-            # Uses HuggingFace Embeddings + FAISS
-            st.session_state.vdb = process_fitness_pdf("temp_rag.pdf")
-            st.success("Knowledge Base Ready! You can now ask questions.")
-            
-    query = st.text_input("Ask the AI about the document:")
-    if query:
-        if 'vdb' in st.session_state:
-            with st.spinner("Retrieving insights..."):
-                # Uses Groq Llama 3 for free-tier inference
-                response = ask_rag_ai(st.session_state.vdb, query)
-                st.markdown(f"### 🤖 AI Insight:\n{response}")
-        else:
-            st.warning("Please upload a PDF first to enable the AI Insight engine.")
+        X = df['ordinal'].values.reshape(-1, 1)
+        y = df['metric'].values
+        model = LinearRegression().fit(X, y)
+        
+        # Predict 7 days from now
+        future_date = datetime.now().toordinal() + 7
+        prediction = model.predict([[future_date]])[0]
+        
+        st.info(f"AI Forecast: You are on track to reach **{prediction:.2f} kg** in 7 days.")
+        
+        fig = px.line(df, x='date', y='metric', title="Your Progress Trend", markers=True)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Log your weight for at least 2 days to activate AI Forecasting.")
+
+    st.divider()
+
+    # 4. Badminton Tracker
+    st.subheader("🏸 Badminton Session Tracker")
+    b_col1, b_col2 = st.columns(2)
+    with b_col1:
+        duration = st.slider("Duration (mins)", 15, 120, 45)
+        intensity = st.select_slider("Intensity", options=["Casual", "Competitive"])
+    with b_col2:
+        met = 7.0 if intensity == "Competitive" else 4.5
+        # Calories = MET * weight_kg * duration_hrs
+        calories = met * (current_weight if current_weight > 0 else 75) * (duration / 60)
+        st.write(f"Estimated Burn: **{calories:.1f} kcal**")
+        if st.button("Log Session"):
+            save_log(user_id, "Badminton_Kcal", calories)
+            st.success("Session saved!")
+
+    # 5. Daily Logging
+    with st.expander("📝 Manual Daily Log"):
+        new_w = st.number_input("Enter Today's Weight (kg)", format="%.2f")
+        if st.button("Update Weight"):
+            save_log(user_id, "Weight", new_w)
+            st.rerun()
