@@ -4,11 +4,11 @@ import hashlib
 def init_db():
     conn = sqlite3.connect('biopulse.db')
     c = conn.cursor()
-    # Users table with is_admin column
+    # Users table with Admin Role (0=User, 1=Admin)
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password TEXT, 
                   weight REAL, is_admin INTEGER DEFAULT 0)''')
-    # Health/Weight logs
+    # General logs (Weight, Burned Calories)
     c.execute('''CREATE TABLE IF NOT EXISTS logs 
                  (id INTEGER PRIMARY KEY, user_id INTEGER, date TEXT, activity TEXT, metric REAL)''')
     # Strength Training table
