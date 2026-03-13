@@ -57,10 +57,10 @@ def main():
                 new_u = st.text_input("Choose Username")
                 new_p = st.text_input("Choose Password", type="password")
                 w = st.number_input("Starting Weight (kg)", value=70.0)
-                # Secret Key: MUKESH2026
+                # Secret Key: PARTHA2026
                 admin_code = st.text_input("Admin Code (Optional)", type="password")
                 if st.button("Initialize"):
-                    role = 1 if admin_code == "MUKESH2026" else 0
+                    role = 1 if admin_code == "PARTHA2026" else 0
                     if add_user(new_u, new_p, w, role):
                         st.success("Sync Complete! Please Log In.")
                     else: st.error("Username already active.")
