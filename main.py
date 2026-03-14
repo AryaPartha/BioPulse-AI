@@ -64,7 +64,7 @@ def main():
                 w = st.number_input("Weight (kg)", value=70.0)
                 admin_code = st.text_input("Admin Code", type="password")
                 if st.button("Create Account"):
-                    role = 1 if admin_code == "MUKESH2026" else 0
+                    role = 1 if admin_code == "PARTHA2026" else 0
                     if add_user(new_u, new_p, w, role): 
                         st.success("Account Created! Please Login.")
                     else:
