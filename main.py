@@ -1,23 +1,24 @@
 import streamlit as st
 import requests
+import sqlite3
 from streamlit_lottie import st_lottie
-from database import init_db, add_user, verify_user
-from app import run_dashboard, run_admin_dashboard
 
-# Ensure database exists
-init_db()
+# Import your custom modules
+try:
+    from database import init_db, add_user, verify_user
+    from app import run_dashboard, run_admin_dashboard
+except ImportError as e:
+    st.error(f"Critical Error: Missing project files. {e}")
+    st.stop()
+
+# Initialize DB
+try:
+    init_db()
+except Exception as e:
+    st.error(f"Database Initialization Failed: {e}")
 
 st.set_page_config(page_title="BioPulse-AI Elite", layout="wide")
 
-# Helper to clear session on logout
-def logout():
-    st.session_state.logged_in = False
-    st.session_state.user_id = None
-    st.session_state.user_name = None
-    st.session_state.is_admin = 0
-    st.rerun()
-
-# Safe Lottie Loader
 def load_lottieurl(url: str):
     try:
         r = requests.get(url, timeout=5)
@@ -33,14 +34,15 @@ def main():
     if not st.session_state.logged_in:
         l_col, r_col = st.columns([1, 1])
         with l_col:
-            if lottie_anim:
+            # Check if lottie_anim exists before rendering
+            if lottie_anim: 
                 st_lottie(lottie_anim, height=400)
-            else:
+            else: 
                 st.title("🧬 BioPulse-AI")
-                st.info("Neural Interface Ready. Please Authenticate.")
+                st.warning("Animation failed to load, but system is online.")
         
         with r_col:
-            t1, t2 = st.tabs(["🔒 Secure Login", "✨ Register Profile"])
+            t1, t2 = st.tabs(["🔒 Login", "✨ Sign Up"])
             with t1:
                 u = st.text_input("Username")
                 p = st.text_input("Password", type="password")
@@ -48,33 +50,35 @@ def main():
                     user_data = verify_user(u, p)
                     if user_data:
                         st.session_state.update({
-                            "logged_in": True, "user_id": user_data[0], 
-                            "user_name": user_data[1], "is_admin": user_data[4]
+                            "logged_in": True, 
+                            "user_id": user_data[0], 
+                            "user_name": user_data[1], 
+                            "is_admin": user_data[4]
                         })
                         st.rerun()
-                    else: st.error("Access Denied: Check Credentials")
+                    else:
+                        st.error("Invalid credentials")
             with t2:
-                new_u = st.text_input("Choose Username")
-                new_p = st.text_input("Choose Password", type="password")
-                w = st.number_input("Starting Weight (kg)", value=70.0)
-                # Secret Key: PARTHA2026
-                admin_code = st.text_input("Admin Code (Optional)", type="password")
-                if st.button("Initialize"):
-                    role = 1 if admin_code == "PARTHA2026" else 0
-                    if add_user(new_u, new_p, w, role):
-                        st.success("Sync Complete! Please Log In.")
-                    else: st.error("Username already active.")
+                new_u = st.text_input("New Username")
+                new_p = st.text_input("New Password", type="password")
+                w = st.number_input("Weight (kg)", value=70.0)
+                admin_code = st.text_input("Admin Code", type="password")
+                if st.button("Create Account"):
+                    role = 1 if admin_code == "MUKESH2026" else 0
+                    if add_user(new_u, new_p, w, role): 
+                        st.success("Account Created! Please Login.")
+                    else:
+                        st.error("Username already exists.")
     else:
-        # Sidebar with Logout and Identity
-        st.sidebar.title("🧬 BioPulse-AI")
-        st.sidebar.write(f"User: **{st.session_state.user_name}**")
-        if st.sidebar.button("🚪 Logout System"):
-            logout()
+        # Sidebar with Logout
+        if st.sidebar.button("🚪 Logout"):
+            st.session_state.logged_in = False
+            st.rerun()
             
         if st.session_state.is_admin == 1:
-            mode = st.sidebar.radio("Navigation", ["Personal Hub", "System Admin"])
+            mode = st.sidebar.radio("Navigation", ["My Fitness", "System Admin"])
             run_admin_dashboard() if mode == "System Admin" else run_dashboard()
-        else:
+        else: 
             run_dashboard()
 
 if __name__ == "__main__":
